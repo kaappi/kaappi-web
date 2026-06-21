@@ -1,0 +1,2 @@
+name: kaappi-web
+depends: kaappi-http kaappi-json

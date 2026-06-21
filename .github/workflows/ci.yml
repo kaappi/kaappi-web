@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Install OpenSSL (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libssl-dev
+
+      - name: Build Kaappi and dependencies
+        run: |
+          git clone --depth 1 https://github.com/kaappi/kaappi.git /tmp/kaappi
+          cd /tmp/kaappi && zig build
+          git clone --depth 1 https://github.com/kaappi/kaappi-net.git /tmp/kaappi-net
+          cd /tmp/kaappi-net && make
+          git clone --depth 1 https://github.com/kaappi/kaappi-http.git /tmp/kaappi-http
+          git clone --depth 1 https://github.com/kaappi/kaappi-json.git /tmp/kaappi-json
+
+      - name: Run routing tests
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi \
+            --lib-path /tmp/kaappi-net/lib \
+            --lib-path /tmp/kaappi-http/lib \
+            --lib-path /tmp/kaappi-json/lib \
+            --lib-path lib \
+            tests/test-routing.scm
+        env:
+          DYLD_LIBRARY_PATH: /tmp/kaappi-net
+          LD_LIBRARY_PATH: /tmp/kaappi-net
+
+      - name: Run session tests
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi \
+            --lib-path /tmp/kaappi-net/lib \
+            --lib-path /tmp/kaappi-http/lib \
+            --lib-path /tmp/kaappi-json/lib \
+            --lib-path lib \
+            tests/test-session.scm
+        env:
+          DYLD_LIBRARY_PATH: /tmp/kaappi-net
+          LD_LIBRARY_PATH: /tmp/kaappi-net

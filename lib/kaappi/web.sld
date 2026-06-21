@@ -16,7 +16,7 @@
           ;; Middleware
           wrap wrap-json-body wrap-logging wrap-cors wrap-errors
           ;; Server
-          serve)
+          serve serve-prefork)
   (begin
 
     ;; =================================================================
@@ -235,6 +235,11 @@
     (define (serve handler port . args)
       (let ((host (if (pair? args) (car args) "0.0.0.0")))
         (http-listen
-          (lambda (request)
-            (handler request))
-          port host)))))
+          (lambda (request) (handler request))
+          port host)))
+
+    (define (serve-prefork handler port workers . args)
+      (let ((host (if (pair? args) (car args) "0.0.0.0")))
+        (http-listen-prefork
+          (lambda (request) (handler request))
+          port workers host)))))

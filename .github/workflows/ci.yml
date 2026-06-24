@@ -32,4 +32,11 @@ jobs:
       - name: Run routing tests
         run: |
           export LD_LIBRARY_PATH=/tmp/kaappi-net
-          /tmp/kaappi/zig-out/bin/kaappi --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+          /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+
+      - name: Upload to Codecov
+        if: github.event_name == 'push'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

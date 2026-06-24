@@ -8,7 +8,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -17,25 +21,27 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Install dependencies
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libssl-dev
 
       - name: Build Kaappi and dependencies
         run: |
           git clone --depth 1 https://github.com/kaappi/kaappi.git /tmp/kaappi
-          cd /tmp/kaappi && zig build -Doptimize=ReleaseSafe
+          cd /tmp/kaappi && zig build
           git clone --depth 1 https://github.com/kaappi/kaappi-net.git /tmp/kaappi-net
           cd /tmp/kaappi-net && make
           git clone --depth 1 https://github.com/kaappi/kaappi-json.git /tmp/kaappi-json
           git clone --depth 1 https://github.com/kaappi/kaappi-http.git /tmp/kaappi-http
 
       - name: Run routing tests
-        run: |
-          export LD_LIBRARY_PATH=/tmp/kaappi-net
-          /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+        run: /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+        env:
+          LD_LIBRARY_PATH: /tmp/kaappi-net
+          DYLD_LIBRARY_PATH: /tmp/kaappi-net
 
       - name: Upload to Codecov
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml

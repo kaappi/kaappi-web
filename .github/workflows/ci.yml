@@ -45,5 +45,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: kaappi/kaappi-web
           files: coverage.xml
           fail_ci_if_error: false

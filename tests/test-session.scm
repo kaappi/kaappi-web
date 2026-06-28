@@ -1,5 +1,5 @@
 ;; Tests for cookies, sessions, and auth middleware
-(import (scheme base) (scheme write) (kaappi web) (kaappi http))
+(import (scheme base) (scheme write) (kaappi http) (kaappi web))
 
 (define pass 0)
 (define fail 0)

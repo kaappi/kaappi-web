@@ -379,8 +379,8 @@
                             (else (cons (car hs) (remove (cdr hs))))))))
               (if is-new
                   (make-response (response-status resp) (response-body resp)
-                    (cons (cdr (set-cookie *session-cookie-name* sid
-                                 '((path . "/") (http-only . #t))))
+                    (cons (set-cookie *session-cookie-name* sid
+                                 '((path . "/") (http-only . #t)))
                           clean-headers))
                   (make-response (response-status resp) (response-body resp)
                     clean-headers)))))))

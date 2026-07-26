@@ -1,3 +1,4 @@
 name: kaappi-web
+version: 0.1.0
 depends: kaappi-http kaappi-json
 kaappi-version: >=0.1.0

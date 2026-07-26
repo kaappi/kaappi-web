@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-26
+
 ### Fixed
 - Session ids are now drawn from the OS-entropy-seeded random source
   instead of a clock-seeded LCG. Two requests arriving in the same

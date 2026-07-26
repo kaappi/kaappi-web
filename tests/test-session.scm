@@ -130,6 +130,64 @@
                          '(("cookie" . "kaappi-sid=my-session"))))))
     (check "profile with session" 200 (response-status resp))))
 
+;; --- Session ID uniqueness ---
+;; Regression: generate-session-id used to derive every character from the
+;; low 4 bits of an LCG whose nibble stream is a fixed period-16 cycle, so
+;; only 16 distinct ids could ever exist and two requests collided ~1/16
+;; of the time (the flaky "profile no session" nightly failure).
+(display "=== Session IDs ===") (newline)
+
+(define (response-sid resp)
+  ;; "kaappi-sid=<32 hex chars>; Path=/; HttpOnly"
+  (let ((h (response-header resp "Set-Cookie")))
+    (and h (substring h 11 43))))
+
+(define (hex-string-32? s)
+  (and (string? s)
+       (= (string-length s) 32)
+       (let loop ((i 0))
+         (or (= i 32)
+             (and (memv (string-ref s i)
+                        '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
+                          #\a #\b #\c #\d #\e #\f))
+                  (loop (+ i 1)))))))
+
+(let* ((store (make-memory-session-store))
+       (handler (wrap-session (lambda (req) (make-response 200 "ok" '()))
+                              store)))
+  (let loop ((i 0) (sids '()) (dups 0) (malformed 0))
+    (if (= i 300)
+        (begin
+          (check "300 fresh sessions get well-formed ids" 0 malformed)
+          (check "300 fresh sessions get 300 distinct ids" 0 dups))
+        (let ((sid (response-sid (handler (make-req "GET" "/")))))
+          (loop (+ i 1)
+                (cons sid sids)
+                (if (member sid sids) (+ dups 1) dups)
+                (if (hex-string-32? sid) malformed (+ malformed 1)))))))
+
+(let loop ((i 0) (leaked 0))
+  (if (= i 100)
+      (check "cookie-less request never inherits a fresh login session (100x)"
+             0 leaked)
+      (let* ((store (make-memory-session-store))
+             (app (routes
+                    (POST "/login"
+                      (lambda (req params)
+                        (make-response 200 "ok"
+                          (list (session-set! req "user" "alice")))))
+                    (GET "/profile"
+                      (lambda (req params)
+                        (if (authenticated? req)
+                            (json-response '(("user" . "alice")))
+                            (json-response '(("error" . "login required")) 401))))))
+             (wrapped (wrap app (lambda (h) (wrap-session h store)))))
+        (wrapped (make-req "POST" "/login"))
+        (loop (+ i 1)
+              (if (= (response-status (wrapped (make-req "GET" "/profile"))) 200)
+                  (+ leaked 1)
+                  leaked)))))
+
 (newline)
 (display "=== Results: ")
 (display pass) (display " passed, ")

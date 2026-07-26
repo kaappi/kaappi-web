@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- Session ids are now drawn from the OS-entropy-seeded random source
+  instead of a clock-seeded LCG. Two requests arriving in the same
+  microsecond previously received identical session ids, letting one
+  request silently adopt the other's session (seen as the flaky
+  "profile no session" failure in nightly CI).
+
 ## [0.1.0] - 2026-07-26
 
 ### Added

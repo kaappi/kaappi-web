@@ -4,7 +4,7 @@
 ;;; higher-order functions, routes are data.
 
 (define-library (kaappi web)
-  (import (scheme base) (scheme write) (scheme char) (scheme cxr) (scheme time)
+  (import (scheme base) (scheme write) (scheme char) (scheme cxr)
           (kaappi http) (kaappi json))
   (export ;; Routing
           routes GET POST PUT DELETE PATCH HEAD
@@ -316,14 +316,16 @@
 
     (define *session-cookie-name* "kaappi-sid")
 
+    ;; Session ids must be unguessable and collision-free across requests
+    ;; (including preforked workers); random-integer draws from Kaappi's
+    ;; OS-entropy-seeded default random source.
     (define (generate-session-id)
       (let ((out (open-output-string))
             (chars "0123456789abcdef"))
-        (let loop ((i 0) (seed (modulo (exact (round (* (current-second) 1000000))) 2147483647)))
+        (let loop ((i 0))
           (when (< i 32)
-            (let ((next (modulo (+ (* seed 1103515245) 12345) 2147483648)))
-              (write-char (string-ref chars (modulo next 16)) out)
-              (loop (+ i 1) next))))
+            (write-char (string-ref chars (random-integer 16)) out)
+            (loop (+ i 1))))
         (get-output-string out)))
 
     ;; In-memory session store

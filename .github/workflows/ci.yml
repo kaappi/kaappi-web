@@ -39,7 +39,13 @@ jobs:
           git clone --depth 1 https://github.com/kaappi/kaappi-http.git /tmp/kaappi-http
 
       - name: Run routing tests
-        run: /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+        run: /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage-routing.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-routing.scm
+        env:
+          LD_LIBRARY_PATH: /tmp/kaappi-net
+          DYLD_LIBRARY_PATH: /tmp/kaappi-net
+
+      - name: Run session tests
+        run: /tmp/kaappi/zig-out/bin/kaappi --coverage-xml coverage-session.xml --lib-path lib --lib-path /tmp/kaappi-net/lib --lib-path /tmp/kaappi-json/lib --lib-path /tmp/kaappi-http/lib tests/test-session.scm
         env:
           LD_LIBRARY_PATH: /tmp/kaappi-net
           DYLD_LIBRARY_PATH: /tmp/kaappi-net
@@ -49,5 +55,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           use_oidc: true
-          files: coverage.xml
+          files: coverage-routing.xml,coverage-session.xml
           fail_ci_if_error: false

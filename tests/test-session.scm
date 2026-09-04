@@ -84,7 +84,9 @@
   (check "session-ref on {} data" #f (session-ref req "user"))
   (check "authenticated with {} data" #f (authenticated? req))
   (check "request-json empty object" '()
-    (request-json (make-req "POST" "/" '(("x-parsed-json" . "{}")) ""))))
+    (request-json (make-req "POST" "/" '(("x-parsed-json" . "{}")) "")))
+  (check "request-json empty object body" '()
+    (request-json (make-req "POST" "/" '() "{}"))))
 
 (check "session-set! on {} data" "{\"user\":\"alice\"}"
   (cdr (session-set! (make-req "GET" "/" '(("x-session-data" . "{}"))) "user" "alice")))
@@ -94,6 +96,19 @@
   (cdr (session-delete! (make-req "GET" "/"
                         '(("x-session-data" . "{\"user\":\"alice\"}")))
                         "user")))
+
+;; the internal x-session-data header carries the same shape: a fresh
+;; or emptied session is {}, not []
+(check "fresh session data header is {}" "{}"
+  (let* ((seen #f)
+         (handler (wrap-session
+                    (lambda (req)
+                      (set! seen (cdr (assoc "x-session-data"
+                                             (request-headers req))))
+                      (make-response 200 "ok" '()))
+                    (make-memory-session-store))))
+    (handler (make-req "GET" "/"))
+    seen))
 
 ;; --- Auth ---
 (display "=== Auth ===") (newline)

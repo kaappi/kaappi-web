@@ -372,7 +372,7 @@
                  (is-new (not (request-cookie request *session-cookie-name*)))
                  (data (or (store 'get sid) '()))
                  (session-header (string-append "sid=" sid))
-                 (data-header (json-write-string data))
+                 (data-header (json-write-string (json-alist->object data)))
                  (new-headers (cons (cons "x-session-id" session-header)
                                     (cons (cons "x-session-data" data-header)
                                           (request-headers request))))

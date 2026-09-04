@@ -75,6 +75,41 @@
     (check "session no new cookie" #f
       (response-header resp "Set-Cookie"))))
 
+;; --- Empty session data ({}) ---
+(display "=== Empty object session data ===") (newline)
+
+;; kaappi-json reads {} as the distinct json-empty-object value; the
+;; session helpers must accept it wherever an alist is expected.
+(let ((req (make-req "GET" "/" '(("x-session-data" . "{}")))))
+  (check "session-ref on {} data" #f (session-ref req "user"))
+  (check "authenticated with {} data" #f (authenticated? req))
+  (check "request-json empty object" '()
+    (request-json (make-req "POST" "/" '(("x-parsed-json" . "{}")) "")))
+  (check "request-json empty object body" '()
+    (request-json (make-req "POST" "/" '() "{}"))))
+
+(check "session-set! on {} data" "{\"user\":\"alice\"}"
+  (cdr (session-set! (make-req "GET" "/" '(("x-session-data" . "{}"))) "user" "alice")))
+
+;; deleting the last key must put {} on the wire, not []
+(check "session-delete! last key" "{}"
+  (cdr (session-delete! (make-req "GET" "/"
+                        '(("x-session-data" . "{\"user\":\"alice\"}")))
+                        "user")))
+
+;; the internal x-session-data header carries the same shape: a fresh
+;; or emptied session is {}, not []
+(check "fresh session data header is {}" "{}"
+  (let* ((seen #f)
+         (handler (wrap-session
+                    (lambda (req)
+                      (set! seen (cdr (assoc "x-session-data"
+                                             (request-headers req))))
+                      (make-response 200 "ok" '()))
+                    (make-memory-session-store))))
+    (handler (make-req "GET" "/"))
+    seen))
+
 ;; --- Auth ---
 (display "=== Auth ===") (newline)
 

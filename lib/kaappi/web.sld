@@ -144,14 +144,25 @@
       (let ((v (param params name)))
         (if v (string->number v) #f)))
 
+    ;; kaappi-json reads {} as the distinct json-empty-object value,
+    ;; which is not a list — assoc/caar die on it. Normalise it to the
+    ;; empty alist at every parse site, and write the sentinel back
+    ;; (not '(), which serialises as []) when an update empties an
+    ;; object.
+    (define (json-object->alist v)
+      (if (json-empty-object? v) '() v))
+
+    (define (json-alist->object v)
+      (if (null? v) json-empty-object v))
+
     (define (request-json req)
       (let ((h (request-header req "x-parsed-json")))
         (if h
-            (json-read-string h)
+            (json-object->alist (json-read-string h))
             (let ((body (request-body req)))
               (if (equal? body "")
                   '()
-                  (json-read-string body))))))
+                  (json-object->alist (json-read-string body)))))))
 
     ;; =================================================================
     ;; Middleware
@@ -371,7 +382,8 @@
                             new-headers (request-body request)))
                  (resp (handler new-req))
                  (updated-data (let ((h (response-header resp "x-session-update")))
-                                 (if h (json-read-string h) data))))
+                                 (if h (json-object->alist (json-read-string h))
+                                     data))))
             (store 'put! sid updated-data)
             (let ((clean-headers
                     (let remove ((hs (response-headers resp)))
@@ -390,7 +402,7 @@
     (define (session-ref req key)
       (let ((data-str (request-header req "x-session-data")))
         (if data-str
-            (let ((data (json-read-string data-str)))
+            (let ((data (json-object->alist (json-read-string data-str))))
               (let ((pair (assoc key data)))
                 (if pair (cdr pair) #f)))
             #f)))
@@ -401,7 +413,7 @@
 
     (define (session-set! req key value)
       (let* ((data-str (or (request-header req "x-session-data") "{}"))
-             (data (json-read-string data-str))
+             (data (json-object->alist (json-read-string data-str)))
              (updated (cons (cons key value)
                             (let remove ((pairs data))
                               (cond ((null? pairs) '())
@@ -411,12 +423,13 @@
 
     (define (session-delete! req key)
       (let* ((data-str (or (request-header req "x-session-data") "{}"))
-             (data (json-read-string data-str))
+             (data (json-object->alist (json-read-string data-str)))
              (updated (let remove ((pairs data))
                         (cond ((null? pairs) '())
                               ((equal? (caar pairs) key) (remove (cdr pairs)))
                               (else (cons (car pairs) (remove (cdr pairs))))))))
-        (cons "x-session-update" (json-write-string updated))))
+        (cons "x-session-update"
+              (json-write-string (json-alist->object updated)))))
 
     (define (session-destroy! req)
       (cons "x-session-update" "{}"))
